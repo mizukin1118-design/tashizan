@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>くり上がりのある たしざん</title>
+    <style>
+        /* 基本スタイルとカラーパレット（明るく親しみやすいデザイン） */
+        :root {
+            --bg-color: #f0f9ff;
+            --card-bg: #ffffff;
+            --primary-color: #ff6b6b;
+            --secondary-color: #4ecdc4;
+            --accent-color: #ffe66d;
+            --text-color: #2d3436;
+            --frame-left-bg: #fff0f0;
+            --frame-left-border: #ff8b8b;
+            --frame-right-bg: #e6f7ff;
+            --frame-right-border: #1890ff;
+            --block-left-color: #ff4757;
+            --block-right-color: #1e90ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: "Hiragino Kaku Gothic ProN", "ヒラギノ角ゴ ProN W3", "メイリオ", Meiryo, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            border: 4px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ヘッダー・問題表示エリア */
+        .header {
+            text-align: center;
+            background: #fff9db;
+            padding: 12px 20px;
+            border-radius: 18px;
+            border: 3px dashed #ffd43b;
+        }
+
+        .problem-display {
+            font-size: 2.8rem;
+            font-weight: bold;
+            color: #2b2b2b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .answer-box {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 90px;
+            height: 70px;
+            border: 4px solid var(--primary-color);
+            border-radius: 16px;
+            background: #fff;
+            color: var(--primary-color);
+            font-size: 2.8rem;
+            font-weight: bold;
+        }
+
+        /* 説明用見出し */
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #4a5568;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: "●";
+            color: var(--primary-color);
+        }
+
+        /* 5×2 10フレーム（数図ブロックエリア） */
+        .manipulative-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 20px;
+            border: 2px solid #cbd5e1;
+            flex-wrap: wrap;
+        }
+
+        .frame-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .frame-label {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #475569;
+        }
+
+        .ten-frame {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 6px;
+            padding: 8px;
+            border-radius: 16px;
+            width: 260px;
+            height: 110px;
+        }
+
+        .frame-left {
+            background-color: var(--frame-left-bg);
+            border: 3px solid var(--frame-left-border);
+        }
+
+        .frame-right {
+            background-color: var(--frame-right-bg);
+            border: 3px solid var(--frame-right-border);
+        }
+
+        .slot {
+            background: rgba(255, 255, 255, 0.7);
+            border: 2px dashed #cbd5e1;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+        }
+
+        /* ブロック本体 */
+        .block {
+            width: 85%;
+            height: 85%;
+            border-radius: 50%;
+            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.2), 2px 2px 4px rgba(0,0,0,0.15);
+            transition: transform 0.2s ease, background-color 0.3s;
+            pointer-events: none; /* 親スロットでクリックイベントを受け取る */
+        }
+
+        .block.left-block {
+            background-color: var(--block-left-color);
+        }
+
+        .block.right-block {
+            background-color: var(--block-right-color);
+        }
+
+        /* 移動アニメーション効果 */
+        .slot:hover .block {
+            transform: scale(1.1);
+        }
+
+        .instruction-hint {
+            text-align: center;
+            font-size: 1rem;
+            color: #059669;
+            font-weight: bold;
+            background: #ecfdf5;
+            padding: 6px 12px;
+            border-radius: 12px;
+            margin-top: -6px;
+        }
+
+        /* 思考プロセス（さくらんぼ計算・穴埋め） */
+        .thinking-process {
+            background: #fff;
+            border: 3px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .step-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            flex-wrap: wrap;
+        }
+
+        .num-badge {
+            background: #edf2f7;
+            padding: 4px 12px;
+            border-radius: 10px;
+            color: #2d3748;
+            min-width: 36px;
+            text-align: center;
+        }
+
+        /* 選択式ドロップダウン */
+        select.blank-select {
+            font-size: 1.3rem;
+            font-weight: bold;
+            padding: 4px 10px;
+            border: 3px solid #3b82f6;
+            border-radius: 12px;
+            background-color: #eff6ff;
+            color: #1d4ed8;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s, background-color 0.2s;
+            text-align-last: center;
+            touch-action: manipulation;
+        }
+
+        select.blank-select:focus {
+            border-color: #2563eb;
+            background-color: #dbeafe;
+        }
+
+        /* アクションボタン */
+        .action-area {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .btn {
+            font-size: 1.4rem;
+            font-weight: bold;
+            padding: 12px 28px;
+            border-radius: 50px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+            transition: all 0.1s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            touch-action: manipulation;
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 rgba(0,0,0,0.15);
+        }
+
+        .btn-check {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .btn-check:hover {
+            background-color: #059669;
+        }
+
+        .btn-next {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .btn-next:hover {
+            background-color: #2563eb;
+        }
+
+        .btn:disabled {
+            background-color: #cbd5e1;
+            color: #94a3b8;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* フィードバックメッセージ＆花まるオーバーレイ */
+        .feedback-message {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: bold;
+            min-height: 36px;
+            color: #dc2626;
+        }
+
+        .feedback-message.success {
+            color: #059669;
+        }
+
+        /* 花まるSVGアニメーション */
+        .hanamaru-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .hanamaru-overlay.show {
+            opacity: 1;
+        }
+
+        .hanamaru-svg {
+            width: 280px;
+            height: 280px;
+            transform: scale(0.5);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .hanamaru-overlay.show .hanamaru-svg {
+            transform: scale(1);
+        }
+
+        /* レスポンシブ調整（スマホ・小型タブレット用） */
+        @media (max-width: 600px) {
+            .problem-display {
+                font-size: 2.2rem;
+            }
+            .answer-box {
+                width: 70px;
+                height: 55px;
+                font-size: 2.2rem;
+            }
+            .ten-frame {
+                width: 210px;
+                height: 90px;
+                gap: 4px;
+                padding: 6px;
+            }
+            .step-row {
+                font-size: 1.05rem;
+            }
+            select.blank-select {
+                font-size: 1.05rem;
+                padding: 2px 6px;
+            }
+            .btn {
+                font-size: 1.1rem;
+                padding: 10px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 花まるオーバーレイ表示 -->
+    <div class="hanamaru-overlay" id="hanamaruOverlay">
+        <svg class="hanamaru-svg" viewBox="0 0 100 100">
+            <!-- 渦巻き（花まる）の描画 -->
+            <path d="M 50 50 
+                     m -5, 0 
+                     a 5,5 0 1,0 10,0 
+                     a 10,10 0 1,0 -20,0 
+                     a 15,15 0 1,0 30,0 
+                     a 20,20 0 1,0 -40,0 
+                     a 25,25 0 1,0 50,0 
+                     a 30,30 0 1,0 -60,0 
+                     a 35,35 0 1,0 70,0" 
+                  fill="none" stroke="#ff4757" stroke-width="4" stroke-linecap="round" />
+            <!-- 外側の花びら -->
+            <path d="M 50 10 Q 55 2 60 10 Q 75 2 75 18 Q 90 20 82 32 Q 95 45 85 55 Q 92 70 78 75 Q 75 90 60 85 Q 50 95 40 85 Q 25 90 22 75 Q 8 70 15 55 Q 5 45 18 32 Q 10 20 25 18 Q 25 2 40 10 Z" 
+                  fill="none" stroke="#ff4757" stroke-width="3" stroke-linecap="round" />
+            <text x="50" y="55" font-size="14" font-weight="bold" fill="#ff4757" text-anchor="middle">たいへんよくできました</text>
+        </svg>
+    </div>
+
+    <!-- 1. 問題表示エリア -->
+    <div class="header">
+        <div class="problem-display">
+            <span id="num1">7</span>
+            <span>＋</span>
+            <span id="num2">4</span>
+            <span>＝</span>
+            <div class="answer-box" id="answerDisplay">?</div>
+        </div>
+    </div>
+
+    <!-- 2. 数図ブロック操作エリア -->
+    <div>
+        <div class="section-title">ぶろっくを うごかして 10の まとまりを つくろう</div>
+        <div class="instruction-hint">
+            みぎの ぶろっくを くりっく（または たっぷ）すると ひだりに ひっこすよ！
+        </div>
+        <div class="manipulative-area" style="margin-top: 8px;">
+            <!-- 左側の10フレーム -->
+            <div class="frame-container">
+                <div class="frame-label" id="leftFrameLabel">ひだり (7)</div>
+                <div class="ten-frame frame-left" id="leftFrame">
+                    <!-- 10個のスロット (JSで動的生成) -->
+                </div>
+            </div>
+
+            <!-- 右側の10フレーム -->
+            <div class="frame-container">
+                <div class="frame-label" id="rightFrameLabel">みぎ (4)</div>
+                <div class="ten-frame frame-right" id="rightFrame">
+                    <!-- 10個のスロット (JSで動的生成) -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 思考プロセスの穴埋めエリア（さくらんぼ計算） -->
+    <div class="thinking-process">
+        <div class="section-title">かんがえかたを かんせいさせよう</div>
+        
+        <!-- ステップ1 -->
+        <div class="step-row">
+            <span class="num-badge" id="step1Num1">7</span>
+            <span>は あと</span>
+            <select class="blank-select" id="selectNeeded">
+                <!-- JSで動的追加 -->
+            </select>
+            <span>で 10</span>
+        </div>
+
+        <!-- ステップ2 -->
+        <div class="step-row">
+            <span class="num-badge" id="step2Num2">4</span>
+            <span>から</span>
+            <select class="blank-select" id="selectSplit1">
+                <!-- JSで動的追加 -->
+            </select>
+            <span>を とって</span>
+            <select class="blank-select" id="selectSplit2">
+                <!-- JSで動的追加 -->
+            </select>
+            <span>あまる</span>
+        </div>
+
+        <!-- ステップ3 -->
+        <div class="step-row">
+            <span>10 と</span>
+            <select class="blank-select" id="selectRemainder">
+                <!-- JSで動的追加 -->
+            </select>
+            <span>で</span>
+            <select class="blank-select" id="selectFinal">
+                <!-- JSで動的追加 -->
+            </select>
+        </div>
+    </div>
+
+    <!-- メッセージ表示エリア -->
+    <div class="feedback-message" id="feedbackMessage"></div>
+
+    <!-- 4. アクションボタン -->
+    <div class="action-area">
+        <button class="btn btn-check" id="checkBtn" type="button" onclick="checkAnswer()">こたえあわせ</button>
+        <button class="btn btn-next" id="nextBtn" type="button" onclick="nextProblem()" disabled>つぎの もんだいへ</button>
+    </div>
+</div>
+
+<script>
+    // アプリケーションの状態変数
+    let num1 = 7;
+    let num2 = 4;
+    let leftBlocksCount = 7;  // 左フレームにあるブロック数
+    let rightBlocksCount = 4; // 右フレームにあるブロック数
+    let isSolved = false;
+
+    // 安全にDOMがロードされてから初期化
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            initProblem();
+        } catch (e) {
+            console.error("Initialization error:", e);
+        }
+    });
+
+    // ランダムな問題の生成 (和が11〜18の1桁+1桁の足し算)
+    function generateProblem() {
+        const problems = [
+            { n1: 9, n2: 2 }, { n1: 9, n2: 3 }, { n1: 9, n2: 4 }, { n1: 9, n2: 5 },
+            { n1: 9, n2: 6 }, { n1: 9, n2: 7 }, { n1: 9, n2: 8 }, { n1: 9, n2: 9 },
+            { n1: 8, n2: 3 }, { n1: 8, n2: 4 }, { n1: 8, n2: 5 }, { n1: 8, n2: 6 },
+            { n1: 8, n2: 7 }, { n1: 8, n2: 8 }, { n1: 8, n2: 9 },
+            { n1: 7, n2: 4 }, { n1: 7, n2: 5 }, { n1: 7, n2: 6 }, { n1: 7, n2: 7 },
+            { n1: 7, n2: 8 }, { n1: 7, n2: 9 },
+            { n1: 6, n2: 5 }, { n1: 6, n2: 6 }, { n1: 6, n2: 7 }, { n1: 6, n2: 8 },
+            { n1: 6, n2: 9 }
+        ];
+        
+        // 直前と同じ問題が極力出ないように選出
+        let p;
+        let attempts = 0;
+        do {
+            p = problems[Math.floor(Math.random() * problems.length)];
+            attempts++;
+        } while (p.n1 === num1 && p.n2 === num2 && attempts < 20);
+
+        num1 = p.n1;
+        num2 = p.n2;
+        leftBlocksCount = num1;
+        rightBlocksCount = num2;
+        isSolved = false;
+    }
+
+    // 問題の初期化とUI描画
+    function initProblem() {
+        generateProblem();
+
+        // 画面テキストの更新
+        const elNum1 = document.getElementById('num1');
+        const elNum2 = document.getElementById('num2');
+        const elAnswer = document.getElementById('answerDisplay');
+        const elStep1 = document.getElementById('step1Num1');
+        const elStep2 = document.getElementById('step2Num2');
+
+        if (elNum1) elNum1.textContent = num1;
+        if (elNum2) elNum2.textContent = num2;
+        if (elAnswer) elAnswer.textContent = '?';
+        if (elStep1) elStep1.textContent = num1;
+        if (elStep2) elStep2.textContent = num2;
+
+        const feedback = document.getElementById('feedbackMessage');
+        if (feedback) {
+            feedback.textContent = '';
+            feedback.className = 'feedback-message';
+        }
+
+        const hanamaru = document.getElementById('hanamaruOverlay');
+        if (hanamaru) hanamaru.classList.remove('show');
+
+        const checkBtn = document.getElementById('checkBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        if (checkBtn) checkBtn.disabled = false;
+        if (nextBtn) nextBtn.disabled = true;
+
+        // ドロップダウン（選択肢）の準備
+        setupSelectOptions();
+
+        // 10フレームの描画
+        renderFrames();
+    }
+
+    // 10フレーム（数図ブロック）のレンダリング
+    function renderFrames() {
+        const leftFrame = document.getElementById('leftFrame');
+        const rightFrame = document.getElementById('rightFrame');
+        const leftLabel = document.getElementById('leftFrameLabel');
+        const rightLabel = document.getElementById('rightFrameLabel');
+
+        if (!leftFrame || !rightFrame) return;
+
+        leftFrame.innerHTML = '';
+        rightFrame.innerHTML = '';
+
+        if (leftLabel) leftLabel.textContent = `ひだり (${leftBlocksCount})`;
+        if (rightLabel) rightLabel.textContent = `みぎ (${rightBlocksCount})`;
+
+        // 左フレーム（10枠）の描画
+        for (let i = 0; i < 10; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'slot';
+
+            if (i < leftBlocksCount) {
+                const block = document.createElement('div');
+                // 移動してきたブロック（num1を超えた分）は青色、最初からのブロックは赤色
+                if (i < num1) {
+                    block.className = 'block left-block';
+                } else {
+                    block.className = 'block right-block';
+                    slot.title = 'くりっくで もとに もどす';
+                    slot.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (!isSolved) moveBlockBack();
+                    });
+                }
+                slot.appendChild(block);
+            } else {
+                // 空きスロット（右側からブロックを受け入れる）
+                slot.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (!isSolved && rightBlocksCount > 0) moveBlockToLeft();
+                });
+            }
+            leftFrame.appendChild(slot);
+        }
+
+        // 右フレーム（10枠）の描画
+        for (let i = 0; i < 10; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'slot';
+
+            if (i < rightBlocksCount) {
+                const block = document.createElement('div');
+                block.className = 'block right-block';
+                slot.appendChild(block);
+
+                // 右側のブロックをクリックすると左側へ移動
+                slot.title = 'くりっくで ひだりに ひっこし';
+                slot.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (!isSolved && leftBlocksCount < 10) moveBlockToLeft();
+                });
+            }
+            rightFrame.appendChild(slot);
+        }
+    }
+
+    // ブロックを右から左へ1つ移動
+    function moveBlockToLeft() {
+        if (rightBlocksCount > 0 && leftBlocksCount < 10) {
+            leftBlocksCount++;
+            rightBlocksCount--;
+            renderFrames();
+        }
+    }
+
+    // ブロックを左から右へ1つ戻す
+    function moveBlockBack() {
+        if (leftBlocksCount > num1) {
+            leftBlocksCount--;
+            rightBlocksCount++;
+            renderFrames();
+        }
+    }
+
+    // 選択肢（ドロップダウン）の設定
+    function setupSelectOptions() {
+        const selects = [
+            'selectNeeded',
+            'selectSplit1',
+            'selectSplit2',
+            'selectRemainder',
+            'selectFinal'
+        ];
+
+        selects.forEach(id => {
+            const select = document.getElementById(id);
+            if (!select) return;
+
+            select.innerHTML = '<option value="">?</option>';
+            
+            // 0〜18までの数字の選択肢を生成
+            for (let i = 0; i <= 18; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = i;
+                select.appendChild(opt);
+            }
+        });
+    }
+
+    // 正誤判定処理
+    function checkAnswer() {
+        try {
+            if (isSolved) return;
+
+            const elNeeded = document.getElementById('selectNeeded');
+            const elSplit1 = document.getElementById('selectSplit1');
+            const elSplit2 = document.getElementById('selectSplit2');
+            const elRemainder = document.getElementById('selectRemainder');
+            const elFinal = document.getElementById('selectFinal');
+
+            const needed = elNeeded ? parseInt(elNeeded.value, 10) : NaN;
+            const split1 = elSplit1 ? parseInt(elSplit1.value, 10) : NaN;
+            const split2 = elSplit2 ? parseInt(elSplit2.value, 10) : NaN;
+            const remainder = elRemainder ? parseInt(elRemainder.value, 10) : NaN;
+            const finalAns = elFinal ? parseInt(elFinal.value, 10) : NaN;
+
+            const feedback = document.getElementById('feedbackMessage');
+
+            // 未入力判定
+            if (isNaN(needed) || isNaN(split1) || isNaN(split2) || isNaN(remainder) || isNaN(finalAns)) {
+                if (feedback) {
+                    feedback.textContent = 'かんがえかたの ぜんぶの [ ? ] に すうじを いれてね！';
+                    feedback.className = 'feedback-message';
+                }
+                return;
+            }
+
+            // 正解条件の定義
+            const correctNeeded = 10 - num1;
+            const correctSplit1 = correctNeeded;
+            const correctSplit2 = num2 - correctNeeded;
+            const correctRemainder = correctSplit2;
+            const correctFinal = num1 + num2;
+
+            // 1. ブロックで10のまとまりが作られているか判定（左が10個になっているか）
+            const isBlockCorrect = (leftBlocksCount === 10);
+
+            // 2. 穴埋め文章の正誤判定
+            const isThinkingCorrect = (
+                needed === correctNeeded &&
+                split1 === correctSplit1 &&
+                split2 === correctSplit2 &&
+                remainder === correctRemainder &&
+                finalAns === correctFinal
+            );
+
+            if (isBlockCorrect && isThinkingCorrect) {
+                // 大正解処理
+                isSolved = true;
+                if (feedback) {
+                    feedback.textContent = 'だいせいかい！ すごいね！';
+                    feedback.className = 'feedback-message success';
+                }
+
+                const answerDisplay = document.getElementById('answerDisplay');
+                if (answerDisplay) answerDisplay.textContent = correctFinal;
+
+                const hanamaru = document.getElementById('hanamaruOverlay');
+                if (hanamaru) hanamaru.classList.add('show');
+
+                const checkBtn = document.getElementById('checkBtn');
+                const nextBtn = document.getElementById('nextBtn');
+                if (checkBtn) checkBtn.disabled = true;
+                if (nextBtn) nextBtn.disabled = false;
+            } else {
+                // 不正解のヒントフィードバック
+                if (feedback) {
+                    if (!isBlockCorrect) {
+                        feedback.textContent = 'ぶろっくを うごかして ひだりを 10の まとまりに しよう！';
+                    } else {
+                        feedback.textContent = 'おしい！ かんがえかたの すうじを もういちど たしかめよう！';
+                    }
+                    feedback.className = 'feedback-message';
+                }
+            }
+        } catch (e) {
+            console.error("checkAnswer error:", e);
+        }
+    }
+
+    // 次の問題へ遷移
+    function nextProblem() {
+        initProblem();
+    }
+</script>
+</body>
+</html>
